@@ -1,0 +1,20 @@
+{
+  "name": "First test",
+  "commands": [
+    {
+      "title": "Run MySQL Shell",
+      "string": "mysqlsh<c:enter>",
+      "target": "Tabby"
+    },
+    {
+      "title": "Quit MySQL Shell",
+      "string": "\\q<c:enter>",
+      "target": "Tabby"
+    },
+    {
+      "title": "Clear console",
+      "string": "clear<c:enter>",
+      "target": "Tabby"
+    }
+  ]
+}

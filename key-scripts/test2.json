@@ -1,0 +1,10 @@
+{
+  "name": "Second test",
+  "commands": [
+    {
+      "title": "Quit MySQL Shell",
+      "string": "/q<c:enter>",
+      "target": "Tabby"
+    }
+  ]
+}
