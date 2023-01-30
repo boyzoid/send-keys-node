@@ -9,11 +9,14 @@ router.get('/', function(req, res, next) {
 
 router.get('/list', function(req, res, next) {
   let result = []
-  const files = fs.readdirSync('key-scripts')
-  for(let file of files){
-    result.push(JSON.parse(fs.readFileSync(`key-scripts/${file}`)) )
-  }
+  const files = fs.readdirSync('command-sets')
   console.log(files)
+  files.forEach(file => {
+    if (file.slice(-4)== "json"){
+      result.push(JSON.parse(fs.readFileSync(`command-sets/${file}`)))
+    }
+
+  })
   res.send(result);
 });
 
