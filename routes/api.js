@@ -1,42 +1,19 @@
-const express = require('express');
-const router = express.Router();
-const fs = require('fs');
-const sendKeys = require('sendkeys-macos');
+const express = require('express')
+const router = express.Router()
+const svc = require('../servcies/SendKeysService')
+const sendKeysService = new svc()
 
 router.get('/', function(req, res, next) {
-  res.send({message: 'Node Demo main endpoint'});
+  res.send({message: 'Node Demo main endpoint'})
 });
 
 router.get('/list', function(req, res, next) {
-  let result = []
-  const files = fs.readdirSync('command-sets')
-  console.log(files)
-  files.forEach(file => {
-    if (file.slice(-4)== "json"){
-      result.push(JSON.parse(fs.readFileSync(`command-sets/${file}`)))
-    }
-
-  })
-  res.send(result);
+  res.send(sendKeysService.files);
 });
 
 router.post('/run', function(req, res, next) {
-  let success = true
-  let command = req.body
-  console.log(req.body)
-  console.log(command.target === 'Tabby')
-
-  try{
-
-    sendKeys(command.target, command.string, { delay: 0.1, initialDelay: .25 })
-    res.send({success: success});
-  }
-  catch (e){
-    success = false
-    res.send({message: e.message});
-  }
+  res.send( sendKeysService.sendCommand(req.body))
 
 });
-
 
 module.exports = router;

@@ -1,0 +1,19 @@
+{
+  "name": "Command Set template",
+  "commands": [
+    {
+      "title": "List Folder",
+      "string": "ls<c:return>",
+      "target": "terminal",
+      "delay": 0.1,
+      "initialDelay": 0.25
+    },
+    {
+      "title": "Clear Console",
+      "string": "clear<c:return>",
+      "target": "terminal",
+      "delay": 0.1,
+      "initialDelay": 0.25
+    }
+  ]
+}

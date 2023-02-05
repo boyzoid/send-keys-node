@@ -40,7 +40,9 @@ getCommandTemplate = function (cdx, cmd){
       </div>
       <div class="card-body">
         <div class="text-bold">Target: ${cmd.target}</div>
-        <button type="button" idx="${cdx}" class="btn btn-sm btn-primary run-cmd">Run Command</button>
+        <div class="text-bold">Initial Delay: ${cmd.initialDelay || .25} second${cmd.initialDelay != 1 ? 's' : ''}</div>
+        <div class="text-bold">Delay: ${cmd.delay || .1} second${cmd.delay != 1 ? 's' : ''}</div>
+        <button type="button" idx="${cdx}" class="btn btn-sm btn-primary run-cmd mt-2">Run Command</button>
       </div>
     </div>
   </div>`
