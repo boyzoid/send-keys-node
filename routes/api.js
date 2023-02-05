@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const svc = require('../servcies/SendKeysService')
+const svc = require('../services/SendKeysService')
 const sendKeysService = new svc()
 
 router.get('/', function(req, res, next) {
