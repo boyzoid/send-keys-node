@@ -33,10 +33,10 @@ commandSetSelected = function(evt){
 }
 
 getCommandTemplate = function (cdx, cmd){
-    return `<div class="col">
+    return `<div class="col-4">
     <div class="card mb-4 rounded-3 shadow-sm">
       <div class="card-header py-3">
-        <h4 class="my-0 fw-normal">${cmd.title}</h4>
+        <h4 class="my-0 fw-normal">${parseInt(cdx)+1}. ${cmd.title}</h4>
       </div>
       <div class="card-body">
         <div class="text-bold">Target: ${cmd.target}</div>
@@ -70,6 +70,12 @@ setList = function( list ){
         newEl.textContent = commandSetList[idx].name || `Command Set ${idx+1}`
         commandSetListEl.appendChild(newEl)
     }
+    // If there is only 1 command set, load it.
+    if( commandSetList.length === 1){
+        commandSetListEl.value = 0
+        let event = new Event('change')
+        commandSetListEl.dispatchEvent(event)
+    }
 }
 
-window.onload = init;
+window.onload = init
