@@ -58,7 +58,7 @@ sendCommand = async function(evt){
             'Content-Type': 'application/json'
         },
     })
-        .then((data) => console.log(data))
+        .then((data) => window.focus())
 }
 
 setList = function( list ){
