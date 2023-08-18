@@ -3,3 +3,4 @@
 /node_modules/
 /command-sets/*.json
 /command-sets/hold/doc_store_queries_mds.json.hold
+/.vscode/
