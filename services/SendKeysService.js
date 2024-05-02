@@ -17,11 +17,14 @@ class SendKeysService{
         return this._files
     }
 
-    sendCommand( command){
+    sendCommand(data){
         let ret = {success: true}
         try{
-            const delay = command.delay || 0.1
-            const initialDelay = command.initialDelay | .25
+            const set = this._files[data.setIndex]
+            const command = set.commands[data.commandIndex]
+            const delay = command.delay || set.delay || 0.1
+            const initialDelay = command.initialDelay || set.initialDelay || .25
+            console.log(command)
             sendKeys(command.target, command.string, { delay: delay, initialDelay: initialDelay })
         }
         catch (e){

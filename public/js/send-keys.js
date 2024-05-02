@@ -20,7 +20,7 @@ commandSetSelected = function(evt){
     if(idx > -1){
         const cmdList = commandSetList[idx].commands
         for(let cdx in cmdList){
-            str += getCommandTemplate(cdx, cmdList[cdx])
+            str += getCommandTemplate(cdx, cmdList[cdx], commandSetList[idx].delay, commandSetList[idx].initialDelay)
         }
         commandListEl.innerHTML = str
         const btnEls = document.querySelectorAll('.run-cmd')
@@ -32,7 +32,7 @@ commandSetSelected = function(evt){
     }
 }
 
-getCommandTemplate = function (cdx, cmd){
+getCommandTemplate = function (cdx, cmd, delay, initialDelay){
     return `<div class="col-4">
     <div class="card mb-4 rounded-3 shadow-sm">
       <div class="card-header py-3">
@@ -40,8 +40,8 @@ getCommandTemplate = function (cdx, cmd){
       </div>
       <div class="card-body">
         <div class="text-bold">Target: ${cmd.target}</div>
-        <div class="text-bold">Initial Delay: ${cmd.initialDelay || .25} second${cmd.initialDelay != 1 ? 's' : ''}</div>
-        <div class="text-bold">Delay: ${cmd.delay || .1} second${cmd.delay != 1 ? 's' : ''}</div>
+        <div class="text-bold">Initial Delay: ${cmd.initialDelay || initialDelay || .25} second${cmd.initialDelay != 1 ? 's' : ''}</div>
+        <div class="text-bold">Delay: ${cmd.delay || delay || .1} second${cmd.delay != 1 ? 's' : ''}</div>
         <button type="button" idx="${cdx}" class="btn btn-sm btn-primary run-cmd mt-2">Run Command</button>
       </div>
     </div>
@@ -51,14 +51,13 @@ getCommandTemplate = function (cdx, cmd){
 sendCommand = async function(evt){
     let cdx = evt.target.getAttribute('idx')
     let idx = document.querySelector('#command-set-list').value
-    let result = await fetch('/api/run',{
+    await fetch('/api/run',{
         method: "POST",
-        body: JSON.stringify(commandSetList[idx].commands[cdx]),
+        body: JSON.stringify({setIndex: idx, commandIndex: cdx}),
         headers: {
             'Content-Type': 'application/json'
         },
     })
-        .then((data) => window.focus())
 }
 
 setList = function( list ){
