@@ -1,65 +1,53 @@
 # SendKeys Node
 
-A Node wrapper for the awesome [SendKeys](https://github.com/socsieng/sendkeys) library by [Soc Sieng](https://github.com/socsieng).
+A local web interface for saved macOS keystroke commands, powered by [sendkeys-macos](https://github.com/socsieng/sendkeys-macos).
 
-## Init the App
+## Set up
 
-Once you haev cloned this repo, navigate to the project folder and run the command:
+Use Node.js 18 or newer on the Mac that will receive the keystrokes.
 
-```shell
+```sh
 npm install
+npm start
 ```
 
-## Writing a Script
+Open <http://localhost:3000>. The server listens on `127.0.0.1` only. The browser must run on the same Mac.
 
-To create a 'script'' or command set, add a JSON file (the name does not matter) to the `command-sets` directory.
+macOS may prompt you to allow the terminal or Node process to control other apps. If a command fails, check **System Settings → Privacy & Security → Accessibility** and **Automation**. Grant access only to the process you use to start this app.
 
-The file should have a JSON structure similar to structure in `command-set.json.template`
+## Command sets
 
-```javascript
+Put a `.json` file in `command-sets` for each set. See `command-sets/command-set.json.template` for an example. Each command needs a `title`, `target` app name, and `string` of keystrokes. Set level and command level `delay` and `initialDelay` are optional numbers of seconds; command values take priority, and `0` is valid.
+
+```json
 {
-  "name": "Command Set template",
+  "name": "Terminal examples",
   "commands": [
     {
-      "title": "List Folder",
+      "title": "List folder",
+      "target": "Terminal",
       "string": "ls<c:return>",
-      "target": "terminal",
       "delay": 0.1,
       "initialDelay": 0.25
     },
     {
-      "title": "Clear Console",
+      "title": "Clear console",
+      "target": "Terminal",
       "string": "clear<c:return>",
-      "target": "terminal",
-      "delay": 0.1,
-      "initialDelay": 0.25
+      "sensitive": true
     }
   ]
 }
 ```
 
-* The `title` property is the name that will appear on the web interface.
-* The `string` property contains the keystrokes you want to send.
-* The `target` property is the app that will receive the keystrokes.
-* The `delay` property is the length of time in between keystrokes in seconds.
-* The `initialDelay` property is how long to delay sending the keystrokes to the app in seconds.
+Set `sensitive: true` on a command to require confirmation in the interface and in the run API. Use **Reload files** after editing a JSON file; malformed files are listed in the interface while valid sets remain available. Search filters the commands in the selected set, and **Preview keystrokes** shows the exact saved string.
 
-## Running the App
+Only put commands you trust in this directory. The app types their keystrokes into another application, and command strings are visible to anyone who can use the local interface. Do not store passwords or other secrets in command sets.
 
-When you have your script (command set) completed, you start the app using the following command
+## Development
 
-```shell
-npm run start
+```sh
+npm test
 ```
 
-If you want to monitor the folder so that Node will refresh when shcanges are made to a script, run:
-
-```shell
-npm run monitor
-```
-
-## Open the App in a Browser
-
-To use the web interface, navigate to [localhost:3000](http://localhost:3000)
-
-**Note:** If you make changes to a script while, you will need to refresh the page to see these cahnges reflected in the browser.
+The run API accepts the existing `setIndex` and `commandIndex` fields. A command with `sensitive: true` also needs `confirmed: true`. SendKeys runs synchronously on the main Node thread. The server responds when the command finishes, so other requests wait while it runs.

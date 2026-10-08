@@ -1,37 +1,106 @@
-const fs = require('fs');
+const fs = require('node:fs');
+const path = require('node:path');
 const sendKeys = require('sendkeys-macos');
 
-class SendKeysService{
-    constructor(){
-        this._files = []
-        const files = fs.readdirSync('command-sets')
-        files.forEach(file => {
-            if (file.slice(-4)== "json"){
-                this._files.push(JSON.parse(fs.readFileSync(`command-sets/${file}`)))
-            }
-
-        })
-    }
-
-    get files(){
-        return this._files
-    }
-
-    sendCommand(data){
-        let ret = {success: true}
-        try{
-            const set = this._files[data.setIndex]
-            const command = set.commands[data.commandIndex]
-            const delay = command.delay || set.delay || 0.1
-            const initialDelay = command.initialDelay || set.initialDelay || .25
-            console.log(command)
-            sendKeys(command.target, command.string, { delay: delay, initialDelay: initialDelay })
-        }
-        catch (e){
-            ret = {success: false, message: e.message}
-        }
-        return ret
-    }
+function validateDelay(value, label) {
+  if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
+    throw new Error(`${label} must be a non-negative number`);
+  }
 }
 
-module.exports = SendKeysService
+function validateSet(set) {
+  if (!set || typeof set !== 'object' || Array.isArray(set)) throw new Error('Expected a command set object');
+  if (set.name !== undefined && typeof set.name !== 'string') throw new Error('name must be a string');
+  if (!Array.isArray(set.commands)) throw new Error('commands must be an array');
+  validateDelay(set.delay, 'delay');
+  validateDelay(set.initialDelay, 'initialDelay');
+  set.commands.forEach((command, index) => {
+    const label = `commands[${index}]`;
+    if (!command || typeof command !== 'object' || Array.isArray(command)) throw new Error(`${label} must be an object`);
+    for (const field of ['title', 'target', 'string']) {
+      if (typeof command[field] !== 'string' || !command[field].trim()) {
+        throw new Error(`${label}.${field} must be a non-empty string`);
+      }
+    }
+    if (command.sensitive !== undefined && typeof command.sensitive !== 'boolean') {
+      throw new Error(`${label}.sensitive must be a boolean`);
+    }
+    validateDelay(command.delay, `${label}.delay`);
+    validateDelay(command.initialDelay, `${label}.initialDelay`);
+  });
+}
+
+class SendKeysService {
+  constructor({ directory = path.join(__dirname, '..', 'command-sets'), runner = sendKeys } = {}) {
+    this.directory = directory;
+    this.runner = runner;
+    this.files = [];
+    this.errors = [];
+    this.busy = false;
+    this.reload();
+  }
+
+  reload() {
+    if (this.busy) {
+      const error = new Error('Wait for the current command to finish before reloading');
+      error.status = 409;
+      throw error;
+    }
+    const files = [];
+    const errors = [];
+    for (const filename of fs.readdirSync(this.directory).filter(name => name.endsWith('.json')).sort()) {
+      try {
+        const set = JSON.parse(fs.readFileSync(path.join(this.directory, filename), 'utf8'));
+        validateSet(set);
+        files.push(set);
+      } catch (error) {
+        errors.push({ file: filename, message: error.message });
+      }
+    }
+    this.files = files;
+    this.errors = errors;
+    return this.list();
+  }
+
+  list() {
+    return { sets: this.files, errors: this.errors };
+  }
+
+  sendCommand(data) {
+    if (this.busy) {
+      const error = new Error('Another command is already running');
+      error.status = 409;
+      throw error;
+    }
+    const parseIndex = value => (typeof value === 'number' ||
+      (typeof value === 'string' && /^\d+$/.test(value))) ? Number(value) : NaN;
+    const setIndex = parseIndex(data?.setIndex);
+    const commandIndex = parseIndex(data?.commandIndex);
+    if (!Number.isInteger(setIndex) || !Number.isInteger(commandIndex) ||
+        setIndex < 0 || commandIndex < 0 ||
+        !this.files[setIndex]?.commands[commandIndex]) {
+      const error = new Error('Select a valid command');
+      error.status = 400;
+      throw error;
+    }
+    const set = this.files[setIndex];
+    const command = set.commands[commandIndex];
+    if (command.sensitive && data.confirmed !== true) {
+      const error = new Error('This command requires confirmation');
+      error.status = 400;
+      throw error;
+    }
+    this.busy = true;
+    try {
+      this.runner(command.target, command.string, {
+        delay: command.delay ?? set.delay ?? 0.1,
+        initialDelay: command.initialDelay ?? set.initialDelay ?? 0.25
+      });
+      return { success: true };
+    } finally {
+      this.busy = false;
+    }
+  }
+}
+
+module.exports = SendKeysService;

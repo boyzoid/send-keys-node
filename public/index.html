@@ -1,64 +1,47 @@
-<html>
-
+<!doctype html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SendKeys</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link href="/stylesheets/style.css" rel="stylesheet">
 </head>
-
 <body>
-<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-  <symbol id="check" viewBox="0 0 16 16">
-    <title>Check</title>
-    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
-  </symbol>
-</svg>
+  <main class="container py-4">
+    <header class="mb-4">
+      <h1 class="h3">SendKeys via Node</h1>
+      <p class="text-muted">Run saved macOS keystroke commands.</p>
+    </header>
 
-<div class="container py-3">
-  <header>
-    <div class="d-flex flex-column flex-md-row align-items-center pb-3 mb-4 border-bottom">
-      <a href="/" class="d-flex align-items-center text-dark text-decoration-none">
-        <span class="fs-4">SendKeys via Node</span>
-      </a>
-    </div>
-  </header>
-<main>
-  <div class="row m-3">
-    <div class="col-md-6">
-      <select class="form-select" id="command-set-list">
-        <option value="-1">Select a Command Set</option>
-      </select>
-    </div>
-  </div>
-  <div id="command-list" class="row mb-3 text-center">
+    <div id="status" class="alert alert-secondary" role="status" aria-live="polite">Loading command sets…</div>
+    <div id="file-errors" class="alert alert-warning" role="alert" hidden></div>
 
-  </div>
-</main>
-<footer class="pt-4 my-md-5 pt-md-5 border-top">
-  <div class="row">
-    <!--<div class="col-6 col-md">
-      <h5>Resources</h5>
-      <ul class="list-unstyled text-small">
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Resource</a></li>
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Resource name</a></li>
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Another resource</a></li>
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Final resource</a></li>
-      </ul>
+    <div class="row g-2 align-items-end mb-4">
+      <div class="col-md-5">
+        <label class="form-label" for="command-set-list">Command set</label>
+        <select class="form-select" id="command-set-list">
+          <option value="">Select a command set</option>
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label" for="command-search">Search commands</label>
+        <input class="form-control" id="command-search" type="search" placeholder="Title or target">
+      </div>
+      <div class="col-md-2">
+        <button id="reload" type="button" class="btn btn-outline-secondary w-100">Reload files</button>
+      </div>
     </div>
-    <div class="col-6 col-md">
-      <h5>About</h5>
-      <ul class="list-unstyled text-small">
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Team</a></li>
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Locations</a></li>
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Privacy</a></li>
-        <li class="mb-1"><a class="link-secondary text-decoration-none" href="#">Terms</a></li>
-      </ul>
-    </div>-->
-  </div>
-</footer>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-<script src="/js/send-keys.js" ></script>
+    <div id="command-list" class="row g-3"></div>
+
+    <section class="mt-5 border-top pt-4" aria-labelledby="setup-heading">
+      <h2 id="setup-heading" class="h5">macOS setup</h2>
+      <p id="platform-status" class="text-muted" role="status"></p>
+      <p class="mb-2">Run this app on the Mac that receives the keystrokes. macOS may ask for Accessibility and Automation permission for your terminal or Node process.</p>
+      <p class="mb-0">Check <strong>System Settings → Privacy &amp; Security → Accessibility</strong> and <strong>Automation</strong> if a command cannot control its target app.</p>
+    </section>
+  </main>
+  <script src="/js/send-keys.js"></script>
 </body>
-
 </html>

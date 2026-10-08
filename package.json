@@ -4,13 +4,15 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "monitor": "nodemon ./bin/www"
+    "monitor": "node --watch ./bin/www",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "cookie-parser": "~1.4.4",
-    "debug": "~2.6.9",
-    "express": "^4.18.2",
-    "morgan": "~1.9.1",
+    "express": "^5.2.1",
+    "morgan": "^1.12.1",
     "sendkeys-macos": "^1.3.0"
   }
 }
