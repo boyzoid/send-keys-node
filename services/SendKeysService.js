@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const sendKeys = require('sendkeys-macos');
+const { setTimeout: sleep } = require('node:timers/promises');
 
 function validateDelay(value, label) {
   if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
@@ -14,6 +15,7 @@ function validateSet(set) {
   if (!Array.isArray(set.commands)) throw new Error('commands must be an array');
   validateDelay(set.delay, 'delay');
   validateDelay(set.initialDelay, 'initialDelay');
+  validateDelay(set.runAllDelay, 'runAllDelay');
   set.commands.forEach((command, index) => {
     const label = `commands[${index}]`;
     if (!command || typeof command !== 'object' || Array.isArray(command)) throw new Error(`${label} must be an object`);
@@ -25,15 +27,19 @@ function validateSet(set) {
     if (command.sensitive !== undefined && typeof command.sensitive !== 'boolean') {
       throw new Error(`${label}.sensitive must be a boolean`);
     }
+    if (command.runAll !== undefined && typeof command.runAll !== 'boolean') {
+      throw new Error(`${label}.runAll must be a boolean`);
+    }
     validateDelay(command.delay, `${label}.delay`);
     validateDelay(command.initialDelay, `${label}.initialDelay`);
   });
 }
 
 class SendKeysService {
-  constructor({ directory = path.join(__dirname, '..', 'command-sets'), runner = sendKeys } = {}) {
+  constructor({ directory = path.join(__dirname, '..', 'command-sets'), runner = sendKeys, wait = sleep } = {}) {
     this.directory = directory;
     this.runner = runner;
+    this.wait = wait;
     this.files = [];
     this.errors = [];
     this.busy = false;
@@ -92,11 +98,51 @@ class SendKeysService {
     }
     this.busy = true;
     try {
-      this.runner(command.target, command.string, {
-        delay: command.delay ?? set.delay ?? 0.1,
-        initialDelay: command.initialDelay ?? set.initialDelay ?? 0.25
-      });
+      this.execute(set, command);
       return { success: true };
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  execute(set, command) {
+    this.runner(command.target, command.string, {
+      delay: command.delay ?? set.delay ?? 0.1,
+      initialDelay: command.initialDelay ?? set.initialDelay ?? 0.25
+    });
+  }
+
+  async runAll(data) {
+    if (this.busy) {
+      const error = new Error('Another command is already running');
+      error.status = 409;
+      throw error;
+    }
+    const value = data?.setIndex;
+    const index = (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value))) ? Number(value) : NaN;
+    const set = Number.isInteger(index) && index >= 0 ? this.files[index] : undefined;
+    const commands = set?.commands.filter(command => command.runAll === true);
+    if (!commands?.length) {
+      const error = new Error('Select a valid set with commands included in Run All');
+      error.status = 400;
+      throw error;
+    }
+    if (commands.some(command => command.sensitive) && data.confirmed !== true) {
+      const error = new Error('This sequence requires confirmation');
+      error.status = 400;
+      throw error;
+    }
+    this.busy = true;
+    try {
+      for (const command of commands) {
+        try {
+          this.execute(set, command);
+        } catch (error) {
+          throw new Error(`Stopped at “${command.title}”: ${error.message || 'Command failed without details'}`);
+        }
+        await this.wait((set.runAllDelay ?? 2) * 1000);
+      }
+      return { success: true, count: commands.length };
     } finally {
       this.busy = false;
     }

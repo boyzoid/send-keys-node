@@ -78,3 +78,74 @@ test('SendKeys completes on the main thread with a successful automation subproc
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, '{"success":true}');
 });
+
+test('Run All opts in commands in order and waits after each with a default of two seconds', async t => {
+  const directory = withDirectory(t);
+  const commands = [
+    { title: 'First', target: 'Terminal', string: 'first', runAll: true, delay: 0 },
+    { title: 'Manual', target: 'Terminal', string: 'manual' },
+    { title: 'Excluded', target: 'Terminal', string: 'excluded', runAll: false },
+    { title: 'Last', target: 'Terminal', string: 'last', runAll: true }
+  ];
+  writeSet(directory, 'set.json', { delay: 0.5, initialDelay: 0, commands });
+  const events = [];
+  let service;
+  service = new SendKeysService({ directory,
+    runner: (target, string, options) => { events.push({ string, ...options }); },
+    wait: async milliseconds => {
+      events.push(milliseconds);
+      assert.throws(() => service.sendCommand({ setIndex: 0, commandIndex: 0 }), { status: 409 });
+      assert.throws(() => service.reload(), { status: 409 });
+      await assert.rejects(service.runAll({ setIndex: 0 }), { status: 409 });
+    }
+  });
+  assert.deepEqual(await service.runAll({ setIndex: '0' }), { success: true, count: 2 });
+  assert.deepEqual(events, [
+    { string: 'first', delay: 0, initialDelay: 0 }, 2000,
+    { string: 'last', delay: 0.5, initialDelay: 0 }, 2000
+  ]);
+  assert.equal(service.busy, false);
+  writeSet(directory, 'set.json', { commands, runAllDelay: 0 });
+  service.reload();
+  events.length = 0;
+  await service.runAll({ setIndex: 0 });
+  assert.equal(events[1], 0);
+  assert.equal(events[3], 0);
+});
+
+test('Run All validates selection and confirmation before sending, and stops on runner failure', async t => {
+  const directory = withDirectory(t);
+  writeSet(directory, 'set.json', { commands: [
+    { title: 'First', target: 'Terminal', string: 'first', runAll: true },
+    { title: 'Sensitive', target: 'Terminal', string: 'secret', runAll: true, sensitive: true },
+    { title: 'Last', target: 'Terminal', string: 'last', runAll: true }
+  ] });
+  const calls = [];
+  const service = new SendKeysService({ directory, wait: async () => {}, runner: (target, string) => {
+    calls.push(string);
+    if (string === 'secret') throw new Error('Permission denied');
+  } });
+  for (const setIndex of ['', -1, 3, null]) {
+    await assert.rejects(service.runAll({ setIndex, confirmed: true }), { status: 400 });
+  }
+  await assert.rejects(service.runAll({ setIndex: 0 }), { status: 400 });
+  assert.deepEqual(calls, []);
+  await assert.rejects(service.runAll({ setIndex: 0, confirmed: true }), /Stopped at “Sensitive”: Permission denied/);
+  assert.deepEqual(calls, ['first', 'secret']);
+  assert.equal(service.busy, false);
+  writeSet(directory);
+  service.reload();
+  await assert.rejects(service.runAll({ setIndex: 0, confirmed: true }), { status: 400 });
+});
+
+test('reload rejects invalid Run All properties', t => {
+  const directory = withDirectory(t);
+  for (const runAllDelay of [-1, '2', null]) {
+    writeSet(directory, 'set.json', { runAllDelay });
+    const service = new SendKeysService({ directory, runner: () => {} });
+    assert.match(service.list().errors[0].message, /runAllDelay/);
+  }
+  writeSet(directory, 'set.json', { commands: [{ title: 'Test', target: 'Terminal', string: 'x', runAll: 'true' }] });
+  const service = new SendKeysService({ directory, runner: () => {} });
+  assert.match(service.list().errors[0].message, /runAll must be a boolean/);
+});

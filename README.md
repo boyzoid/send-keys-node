@@ -44,6 +44,10 @@ Set `sensitive: true` on a command to require confirmation in the interface and 
 
 Only put commands you trust in this directory. The app types their keystrokes into another application, and command strings are visible to anyone who can use the local interface. Do not store passwords or other secrets in command sets.
 
+Use **Run All** to send commands with `"runAll": true` in their JSON order. Commands with `false` or no `runAll` property remain available individually. Search does not change the sequence. The set-level `"runAllDelay": 2` controls the pause in seconds after each command finishes, including the last; it defaults to 2 and accepts 0. This is separate from the keystroke `delay` and `initialDelay` settings.
+
+Run All confirms any included sensitive commands before starting and prevents other runs or reloads during the sequence. A SendKeys failure stops the sequence; errors printed by the target application (such as an intentional SQL constraint error) do not stop it. Keep the page open until it finishes; closing it does not cancel the server sequence. The inventory demo includes its first eight commands and leaves the final reset manual.
+
 ## Development
 
 ```sh
@@ -51,3 +55,5 @@ npm test
 ```
 
 The run API accepts the existing `setIndex` and `commandIndex` fields. A command with `sensitive: true` also needs `confirmed: true`. SendKeys runs synchronously on the main Node thread. The server responds when the command finishes, so other requests wait while it runs.
+
+`POST /api/run-all` accepts a JSON body with `setIndex` and, if included commands are sensitive, `confirmed: true`. It responds with `{ "success": true, "count": 8 }` after the sequence and its pauses finish. Pauses allow other requests, while individual SendKeys calls still run synchronously.

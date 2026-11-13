@@ -65,3 +65,40 @@ test('run API reports synchronous completion and errors', async t => {
   assert.equal(failure.status, 500);
   assert.match((await failure.json()).message, /Permission denied/);
 });
+
+test('Run All API awaits completion and reports validation and execution failures', async t => {
+  let release;
+  let failure;
+  let received;
+  const fakeService = {
+    runAll: async data => {
+      received = data;
+      if (failure) throw failure;
+      await new Promise(resolve => { release = resolve; });
+      return { success: true, count: 2 };
+    }
+  };
+  const testApp = express();
+  testApp.use(express.json());
+  testApp.use('/api', createRouter(fakeService));
+  const server = testApp.listen(0, '127.0.0.1');
+  t.after(() => server.close());
+  await new Promise(resolve => server.once('listening', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/api/run-all`;
+  const badType = await fetch(url, { method: 'POST', body: '{}' });
+  assert.equal(badType.status, 415);
+  const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ setIndex: 0, confirmed: true }) };
+  const pending = fetch(url, options);
+  while (!release) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.deepEqual(received, { setIndex: 0, confirmed: true });
+  release();
+  const response = await pending;
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { success: true, count: 2 });
+  failure = Object.assign(new Error('Already running'), { status: 409 });
+  assert.equal((await fetch(url, options)).status, 409);
+  failure = new Error('SendKeys failed');
+  const failed = await fetch(url, options);
+  assert.equal(failed.status, 500);
+  assert.match((await failed.json()).message, /SendKeys failed/);
+});

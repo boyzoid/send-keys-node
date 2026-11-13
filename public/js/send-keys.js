@@ -2,6 +2,8 @@ const setSelect = document.querySelector('#command-set-list');
 const searchInput = document.querySelector('#command-search');
 const listEl = document.querySelector('#command-list');
 const reloadButton = document.querySelector('#reload');
+const runAllButton = document.querySelector('#run-all');
+const runAllInfo = document.querySelector('#run-all-info');
 const statusEl = document.querySelector('#status');
 const errorsEl = document.querySelector('#file-errors');
 let commandSets = [];
@@ -57,6 +59,7 @@ function detail(parent, label, value) {
 
 function renderCommands() {
   listEl.replaceChildren();
+  updateRunAll();
   if (setSelect.value === '') return;
   const setIndex = Number(setSelect.value);
   const set = commandSets[setIndex];
@@ -79,6 +82,7 @@ function renderCommands() {
     detail(body, 'Target', command.target);
     detail(body, 'Initial delay', `${command.initialDelay ?? set.initialDelay ?? 0.25} seconds`);
     detail(body, 'Key delay', `${command.delay ?? set.delay ?? 0.1} seconds`);
+    detail(body, 'Run All', command.runAll === true ? 'Included' : 'Manual only');
     const preview = document.createElement('details');
     preview.className = 'mt-3';
     const summary = document.createElement('summary');
@@ -107,13 +111,51 @@ function renderCommands() {
   }
 }
 
+function updateRunAll() {
+  const set = setSelect.value === '' ? undefined : commandSets[Number(setSelect.value)];
+  const count = set?.commands.filter(command => command.runAll === true).length || 0;
+  runAllButton.disabled = running || count === 0;
+  runAllInfo.textContent = set
+    ? `${count} included commands · ${set.runAllDelay ?? 2} seconds after each command. Uses set order, regardless of search.` : '';
+}
+
+function setRunning(value) {
+  running = value;
+  reloadButton.disabled = value;
+  setSelect.disabled = value;
+  document.querySelectorAll('.run-command').forEach(button => { button.disabled = value; });
+  updateRunAll();
+}
+
+async function runAll() {
+  if (running || setSelect.value === '') return;
+  const setIndex = Number(setSelect.value);
+  const set = commandSets[setIndex];
+  const included = set.commands.filter(command => command.runAll === true);
+  if (!included.length) return;
+  const sensitive = included.filter(command => command.sensitive);
+  if (sensitive.length && !window.confirm(`Run this sequence including sensitive commands?\n\n${sensitive.map(command => `${command.title} (${command.target})\n${command.string}`).join('\n\n')}`)) return;
+  setRunning(true);
+  setStatus(`Running ${included.length} commands from “${set.name || 'Command set'}”…`);
+  try {
+    const result = await requestJson('/api/run-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setIndex, confirmed: sensitive.length > 0 })
+    });
+    setStatus(`Finished ${result.count} commands.`, 'success');
+  } catch (error) {
+    setStatus(`Run All failed: ${error.message}`, 'danger');
+  } finally {
+    setRunning(false);
+  }
+}
+
 async function runCommand(setIndex, commandIndex) {
   const command = commandSets[setIndex]?.commands[commandIndex];
   if (!command || running) return;
   if (command.sensitive && !window.confirm(`Run “${command.title}” in ${command.target}?\n\nKeystrokes:\n${command.string}`)) return;
-  running = true;
-  reloadButton.disabled = true;
-  document.querySelectorAll('.run-command').forEach(button => { button.disabled = true; });
+  setRunning(true);
   setStatus(`Running “${command.title}”…`);
   try {
     await requestJson('/api/run', {
@@ -127,9 +169,7 @@ async function runCommand(setIndex, commandIndex) {
       ? ' Check macOS Privacy & Security → Accessibility and Automation permissions.' : '';
     setStatus(`SendKeys reported an error for “${command.title}”: ${error.message}${permissionHelp}`, 'danger');
   } finally {
-    running = false;
-    reloadButton.disabled = false;
-    document.querySelectorAll('.run-command').forEach(button => { button.disabled = false; });
+    setRunning(false);
   }
 }
 
@@ -148,6 +188,7 @@ async function reload() {
 setSelect.addEventListener('change', renderCommands);
 searchInput.addEventListener('input', renderCommands);
 reloadButton.addEventListener('click', reload);
+runAllButton.addEventListener('click', runAll);
 requestJson('/api/list').then(applyList).catch(error => setStatus(`Could not load command sets: ${error.message}`, 'danger'));
 requestJson('/api/setup').then(result => {
   document.querySelector('#platform-status').textContent = result.supported

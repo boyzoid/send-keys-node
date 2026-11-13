@@ -26,6 +26,17 @@ function createRouter(service = new SendKeysService()) {
     }
   });
 
+  router.post('/run-all', async (req, res) => {
+    if (!req.is('application/json')) {
+      return res.status(415).json({ success: false, message: 'Send a JSON request' });
+    }
+    try {
+      res.json(await service.runAll(req.body));
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Sequence failed without details' });
+    }
+  });
+
   return router;
 }
 

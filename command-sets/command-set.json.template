@@ -1,19 +1,39 @@
 {
   "name": "Command Set template",
+  "delay": 0.1,
+  "initialDelay": 0.25,
+  "runAllDelay": 2,
   "commands": [
     {
       "title": "List Folder",
+      "runAll": true,
+      "sensitive": false,
       "string": "ls<c:return>",
-      "target": "terminal",
-      "delay": 0.1,
-      "initialDelay": 0.25
+      "target": "Terminal"
     },
     {
       "title": "Clear Console",
-      "string": "clear<c:return>",
-      "target": "terminal",
-      "delay": 0.1,
-      "initialDelay": 0.25
+      "runAll": false,
+      "sensitive": true,
+      "string": "clear<c:return><p:1>",
+      "target": "Terminal",
+      "delay": 0,
+      "initialDelay": 0
+    },
+    {
+      "title": "Print two messages with a one-second pause",
+      "runAll": true,
+      "sensitive": false,
+      "string": "echo First message<c:return><p:1>echo Second message<c:return>",
+      "target": "Terminal"
+    },
+    {
+      "title": "MySQL session in Tabby: clear and run a multiline query",
+      "runAll": false,
+      "sensitive": false,
+      "string": "\\! clear<c:return><p:1>SELECT\n    'Hello from MySQL' AS message;<c:return>",
+      "target": "Tabby",
+      "delay": 0.01
     }
   ]
 }
